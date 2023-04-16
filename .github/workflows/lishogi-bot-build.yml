@@ -5,7 +5,6 @@ name: Lishogi Bot Build
 
 on:
   push:
-    branches: [ master ]
   pull_request_target:
 
 env:
@@ -25,7 +24,7 @@ jobs:
         cache: "pip"
     - name: Install dependencies
       run: |
-        sudo apt install fairy-stockfish
+        sudo apt install fairy-stockfish sjaakii
         pip install -r requirements.txt
     - name: Test with pytest
       run: |

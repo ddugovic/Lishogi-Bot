@@ -48,6 +48,7 @@ class Lishogi:
         self.logging_level = logging_level
 
     def is_final(exception):
+        logger.warning(exception)
         return isinstance(exception, HTTPError) and exception.response.status_code < 500
 
     @backoff.on_exception(backoff.constant,

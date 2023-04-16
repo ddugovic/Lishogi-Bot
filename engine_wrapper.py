@@ -5,11 +5,11 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
-from engine_ctrl import usi
+from engine_ctrl import usi, xboard
 
 
 @backoff.on_exception(backoff.expo, BaseException, max_time=120)
-def create_engine(config):
+def create_engine(variant, config, base=0, inc=0, byo=0):
     cfg = config["engine"]
     engine_path = os.path.realpath(os.path.join(cfg["dir"], cfg["name"]))
     engine_working_dir = cfg.get("working_dir") or os.getcwd()
@@ -28,12 +28,14 @@ def create_engine(config):
         Engine = getHomemadeEngine(cfg["name"])
     elif engine_type == "usi":
         Engine = USIEngine
+    elif engine_type == "xboard":
+        Engine = XBoardEngine
     else:
         raise ValueError(
             f"Invalid engine type: {engine_type}. Expected usi or homemade.")
 
-    logger.debug(f"Starting engine: {' '.join(commands)}")
-    return Engine(commands, usi_options, go_commands, silence_stderr, cwd=engine_working_dir)
+    logger.info(f"Starting engine: {' '.join(commands)}")
+    return Engine(commands, usi_options, go_commands, variant, base, inc, byo, silence_stderr, cwd=engine_working_dir)
 
 
 class Termination(str, Enum):
@@ -57,7 +59,7 @@ class EngineWrapper:
         moves = "" if game.variant_name == "Standard" else game.state["moves"].split()
         sfen = board.sfen() if game.variant_name == "Standard" else game.initial_sfen
         self.engine.set_variant_options(game.variant_name.lower())
-        return self.search(sfen, moves, movetime=movetime // 1000)
+        return self.search(sfen, moves, turn=board.turn, movetime=movetime // 1000)
     
     def search_with_ponder(self, game, board, btime, wtime, binc, winc, byo, ponder=False):
         moves = [m.usi() for m in list(board.move_stack)] if game.variant_name == "Standard" else game.state["moves"].split()
@@ -68,6 +70,7 @@ class EngineWrapper:
             movetime = float(movetime) / 1000
         best_move, ponder_move = self.search(sfen,
                                              moves,
+                                             turn=board.turn,
                                              btime=btime,
                                              wtime=wtime,
                                              binc=binc,
@@ -79,9 +82,10 @@ class EngineWrapper:
                                              ponder=ponder)
         return best_move, ponder_move
     
-    def search(self, sfen, moves, btime=None, wtime=None, binc=None, winc=None, byo=None, nodes=None, depth=None, movetime=None, ponder=False):
+    def search(self, sfen, moves, turn, btime=None, wtime=None, binc=None, winc=None, byo=None, nodes=None, depth=None, movetime=None, ponder=False):
         best_move, ponder_move = self.engine.go(sfen,
                                                 moves,
+                                                turn=turn,
                                                 btime=btime,
                                                 wtime=wtime,
                                                 binc=binc,
@@ -127,12 +131,12 @@ class EngineWrapper:
 
 
 class USIEngine(EngineWrapper):
-    def __init__(self, commands, options, go_commands, silence_stderr=False, cwd=None):
+    def __init__(self, commands, options, go_commands, variant, base, inc, byo, silence_stderr=False, cwd=None):
         commands = commands[0] if len(commands) == 1 else commands
         super(USIEngine, self).__init__(go_commands)
 
         self.engine = usi.Engine(commands, cwd=cwd)
-        self.engine.usi()
+        self.engine.usi(variant)
 
         if options:
             for name, value in options.items():
@@ -161,6 +165,43 @@ class USIEngine(EngineWrapper):
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
         self.engine.position(game.initial_sfen, moves)
+
+
+class XBoardEngine(EngineWrapper):
+    def __init__(self, commands, options, go_commands, variant, base, inc, byo, silence_stderr=False, cwd=None):
+        commands = commands[0] if len(commands) == 1 else commands
+        super(XBoardEngine, self).__init__(go_commands)
+
+        self.engine = xboard.Engine(commands, cwd=cwd)
+        self.engine.xboard(variant, base, inc, byo)
+
+        if options:
+            for name, value in options.items():
+                self.engine.setoption(name, value)
+        self.engine.ping()
+
+    def ponderhit(self):
+        self.engine.ponderhit()
+
+    def stop(self):
+        self.engine.stop()
+
+    def quit(self):
+        self.engine.quit()
+
+    def kill_process(self):
+        self.engine.kill_process()
+
+    def get_opponent_info(self, game):
+        name = game.opponent.name
+        if name:
+            rating = game.opponent.rating if game.opponent.rating is not None else "none"
+            title = game.opponent.title if game.opponent.title else "none"
+            player_type = "computer" if title == "BOT" else "human"
+
+    def report_game_result(self, game, board):
+        moves = [m.usi() for m in board.move_stack]
+        self.engine.setboard(game.initial_sfen, moves)
 
 
 def getHomemadeEngine(name):

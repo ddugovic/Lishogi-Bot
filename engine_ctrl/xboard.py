@@ -1,3 +1,4 @@
+import shogi
 import threading
 import subprocess
 import os
@@ -14,6 +15,9 @@ class Engine:
         cwd = cwd or os.path.realpath(os.path.expanduser("."))
         self.proccess = self.open_process(command, cwd)
         self.go_commands = None
+        self.force = False
+        self.startpos = None
+        self.usermove = False
 
     def set_go_commands(self, go_comm):
         self.go_commands = go_comm
@@ -63,63 +67,63 @@ class Engine:
             line = self.proccess.stdout.readline()
             if line == "":
                 raise EOFError()
-
             line = line.rstrip()
-
             logger.debug(f">> {line}")
-
             if line:
                 return line
 
-    def recv_usi(self):
+    def recv_xboard(self):
         command_and_args = self.recv().split(None, 1)
         if len(command_and_args) == 1:
             return command_and_args[0], ""
         elif len(command_and_args) == 2:
             return command_and_args
 
-    def usi(self, variant):
-        self.send("usi")
-
-        # set variant before enabling variant-specific options (if any)
-        if variant in ["standard"]:
-            variant = "shogi"
-        self.setoption("USI_Variant", variant)
+    def xboard(self, variant, base, inc, byo):
+        self.send("xboard\nprotover 2")
+        self.base = base
+        self.inc = inc
+        self.byo = byo
+        self.send("level 0 %d %d" % (self.base, self.inc + self.byo))
+        self.send("new\nforce")
+        self.force = True
 
         engine_info = {}
 
         while True:
-            command, arg = self.recv_usi()
+            command, arg = self.recv_xboard()
 
-            if command == "usiok":
-                return engine_info
-            elif command == "id":
-                name_and_value = arg.split(None, 1)
-                if len(name_and_value) == 2:
-                    engine_info[name_and_value[0]] = name_and_value[1]
-            elif command == "option":
-                pass
-            elif command == "Fairy-Stockfish" and " by " in arg:
-                # Ignore identification line
+            if command == "feature":
+                if arg == "done=1":
+                    return engine_info
+                feature, value = arg.split("=", 1)
+                if feature == "usermove":
+                    self.usermove = value
+                #elif command == "id":
+                #    name_and_value = arg.split(None, 1)
+                #    if len(name_and_value) == 2:
+                #        engine_info[name_and_value[0]] = name_and_value[1]
                 pass
             else:
-                logger.warning("Unexpected engine response to usi: %s %s" % (command, arg))
+                logger.warning("Unexpected engine response to protover 2: %s %s" % (command, arg))
             self.id = engine_info
 
-    def isready(self):
-        self.send("isready")
+    def ping(self):
+        self.send("ping 1")
         while True:
-            command, arg = self.recv_usi()
-            if command == "readyok":
+            command, arg = self.recv_xboard()
+            if command == "pong":
                 break
-            elif command == "info" and arg.startswith("string Error! "):
-                logger.error("Unexpected engine response to isready: %s %s" % (command, arg))
-            elif command == "info" and arg.startswith("string "):
-                pass
             else:
-                logger.warning("Unexpected engine response to isready: %s %s" % (command, arg))
+                logger.warning("Unexpected engine response to ping: %s %s" % (command, arg))
 
     def setoption(self, name, value):
+        name = name.lower()
+        if name == "hash":
+            name = "memory"
+        elif name == "threads":
+            name = "cores"
+
         if value is True:
             value = "true"
         elif value is False:
@@ -127,66 +131,76 @@ class Engine:
         elif value is None:
             value = "none"
 
-        self.send("setoption name %s value %s" % (name, value))
+        self.send("%s %s" % (name, value))
 
     def set_variant_options(self, variant):
-        if variant in ["standard"]:
-            self.setoption("USI_Variant", "shogi")
+        if variant == "chushogi":
+            variant = "chu"
+            self.startpos = "lfcsgekgscfl/a1b1txot1b1a/mvrhdqndhrvm/pppppppppppp/3i4i3/12/12/3I4I3/PPPPPPPPPPPP/MVRHDNQDHRVM/A1B1TOXT1B1A/LFCSGKEGSCFL b - 1"
+        elif variant == "minishogi":
+            variant = "minishogi"
+            self.startpos = "rbsgk/4p/5/P4/KGSBR b - 1"
         else:
-            self.setoption("USI_Variant", variant)
+            variant = "shogi"
+            self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
+        self.send("variant %s" % variant)
+        self.setboard(self.startpos)
 
     def go(self, position, moves, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
-        self.position(position, moves)
+        time = btime if turn == shogi.BLACK else wtime
+        otim = wtime if turn == shogi.BLACK else btime
 
         builder = []
-        builder.append("go")
-        if ponder:
-            builder.append("ponder")
+        if self.force:
+            builder.append("hard" if ponder else "easy")
         if movetime is not None:
-            builder.append("movetime")
-            builder.append(str(movetime))
-        if nodes is not None:
-            builder.append("nodes")
-            builder.append(str(nodes))
+            builder.append("st %d" % movetime)
         if depth is not None:
-            builder.append("depth")
-            builder.append(str(depth))
-        # In Shogi and USI, black is the player to move first
-        if btime is not None:
-            builder.append("btime")
-            builder.append(str(btime))
-        if wtime is not None:
-            builder.append("wtime")
-            builder.append(str(wtime))
-        if binc is not None:
-            builder.append("binc")
-            builder.append(str(binc))
-        if winc is not None:
-            builder.append("winc")
-            builder.append(str(winc))
-        if byo is not None:
-            builder.append("byoyomi")
-            builder.append(str(byo))
+            builder.append("sd %d" % depth)
+        if time is not None:
+            builder.append("time %d" % (time // 10))
+        if otim is not None:
+            builder.append("otim %d" % (otim // 10))
+        self.send("\n".join(builder))
 
-        self.send(" ".join(builder))
+        self.setboard(self.startpos, moves)
+        if self.force:
+            self.send("go")
+            self.force = False
 
         info = {}
-        info["bestmove"] = None
+        info["move"] = None
         info["pondermove"] = None
 
         while True:
-            command, arg = self.recv_usi()
+            command, arg = self.recv_xboard()
 
-            if command == "bestmove":
+            if command == "move":
                 arg_split = arg.split()
                 bestmove = arg_split[0]
-                if bestmove and bestmove != "(none)":
-                    info["bestmove"] = bestmove
-                if len(arg_split) == 3:
-                    if arg_split[1] == "ponder":
-                        ponder_move = arg_split[2]
-                        if ponder_move and ponder_move != "(none)":
-                            info["pondermove"] = ponder_move
+                if bestmove and bestmove != "@@@@":
+                    # Translate a3a4 -> 9g9f
+                    files = {'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6', 'g': '7', 'h': '8', 'i': '9'}
+                    ranks = {'1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e', '6': 'f', '7': 'g', '8': 'h', '9': 'i'}
+
+                    info["bestmove"] = ''
+                    if bestmove[1] == '@':
+                        info["bestmove"] += bestmove[0] + "*"
+                    else:
+                        info["bestmove"] += files[bestmove[0]]
+                        info["bestmove"] += ranks[bestmove[1]]
+                    info["bestmove"] += files[bestmove[2]]
+                    info["bestmove"] += ranks[bestmove[3]]
+                    if len(bestmove) > 4:
+                        info["bestmove"] += bestmove[4:]
+                #if len(arg_split) == 3:
+                #    if arg_split[1] == "ponder":
+                #        ponder_move = arg_split[2]
+                #        if ponder_move and ponder_move != "@@@@":
+                #            info["pondermove"] = ponder_move
+                if movetime is not None:
+                    # restore time control for future turns
+                    self.send("level 0 %d %d" % (self.base, self.inc + self.byo))
                 return (info["bestmove"], info["pondermove"])
 
             elif command == "info":
@@ -249,11 +263,26 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
 
-    def position(self, position, moves):
-        if position != "startpos":
-            position = "sfen " + position
-        self.send("position %s moves %s" % (position, " ".join(moves)))
-        logger.debug("position %s moves %s" % (position, " ".join(moves)))
+    def setboard(self, position, moves=None):
+        if moves:
+            self.send(self.move(moves[-1]))
+        else:
+            self.send("setboard %s" % (self.startpos if position == "startpos" else position))
+
+    def move(self, move):
+        files = {'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6', 'g': '7', 'h': '8', 'i': '9'}
+        ranks = {'1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e', '6': 'f', '7': 'g', '8': 'h', '9': 'i'}
+        usermove = ''
+        if move[1] == '*':
+            usermove += move[0] + "@"
+        else:
+            usermove += ranks[move[0]]
+            usermove += files[move[1]]
+        usermove += ranks[move[2]]
+        usermove += files[move[3]]
+        if len(move) > 4:
+            usermove += move[4]
+        return ("usermove %s" % usermove) if self.usermove else usermove
 
     def stop(self):
         self.send("stop")

@@ -24,7 +24,7 @@ from http.client import RemoteDisconnected
 
 logger = logging.getLogger(__name__)
 
-__version__ = "1.1.2"
+__version__ = "1.2.0"
 
 terminated = False
 
@@ -39,6 +39,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 def is_final(exception):
+    logger.debug(exception)
     return isinstance(exception, HTTPError) and exception.response.status_code < 500
 
 
@@ -260,7 +261,7 @@ def play_game(li, game_id, control_queue, user_profile, config, challenge_queue,
     initial_state = json.loads(next(lines).decode("utf-8"))
     game = model.Game(initial_state, user_profile["username"], li.baseUrl, config.get("abort_time", 20))
 
-    engine = engine_wrapper.create_engine(config)
+    engine = engine_wrapper.create_engine(game.variant_name.lower(), config, game.clock_initial, game.clock_increment, game.clock_byoyomi)
     engine.get_opponent_info(game)
     conversation = Conversation(game, engine, li, __version__, challenge_queue)
 
@@ -314,9 +315,10 @@ def play_game(li, game_id, control_queue, user_profile, config, challenge_queue,
                 elif is_engine_move(game, board):
                     if len(board.move_stack) < 2:
                         conversation.send_message("player", hello)
+                    else:
+                        print_last_move(board)
                     start_time = time.perf_counter_ns()
                     fake_thinking(config, board, game)
-                    print_move_number(board)
                     correspondence_disconnect_time = correspondence_cfg.get("disconnect_time", 300)
 
                     if len(board.move_stack) < 2:
@@ -497,9 +499,11 @@ def fake_thinking(config, board, game):
         time.sleep(sleep)
 
 
-def print_move_number(board):
+def print_last_move(board):
+    moves = board.move_stack
+    move = moves[-1] if moves else None
     logger.info("")
-    logger.info(f"move: {len(board.move_stack) // 1 + 1}")
+    logger.info(f"Last move: {len(board.move_stack)}. {move}")
 
 
 def setup_board(game):
@@ -514,7 +518,7 @@ def setup_board(game):
             if board.is_legal(usi_move):
                 board.push(usi_move)
             else:
-                logger.debug(f"Ignoring illegal move {move} on board {board.sfen()}")
+                logger.debug(f"Ignoring illegal setup move {move} on board {board.sfen()}")
     else:
         board = shogi.Board()
         for move in game.state["moves"].split():
