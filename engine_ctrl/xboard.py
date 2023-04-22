@@ -87,6 +87,8 @@ class Engine:
         self.send("level 0 %d %d" % (self.base, self.inc + self.byo))
         self.send("new\nforce")
         self.force = True
+        self.setboard = False
+        self.usermove = False
 
         engine_info = {}
 
@@ -99,8 +101,10 @@ class Engine:
                 # TODO: use a CFG (e.g. argparse) to parse lines such as:
                 # feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0
                 # feature option="Mate search -combo Disabled /// *Enabled for drop games /// Enabled"
-                self.setboard = "setboard=1" in args.split(" ")
-                self.usermove = "usermove=1" in args.split(" ")
+                if "setboard=1" in args.split(" "):
+                    self.setboard = True
+                if "usermove=1" in args.split(" "):
+                    self.usermove = True
                 pass
             else:
                 logger.warning("Unexpected engine response to protover 2: %s %s" % (command, args))
