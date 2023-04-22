@@ -135,8 +135,8 @@ class Engine:
         else:
             self.setoption("USI_Variant", variant)
 
-    def go(self, position, moves, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
-        self.position(position, moves)
+    def go(self, startpos, moves, sfen, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
+        self.position(startpos, moves, sfen)
 
         builder = []
         builder.append("go")
@@ -249,11 +249,10 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
 
-    def position(self, position, moves):
-        if position != "startpos":
-            position = "sfen " + position
-        self.send("position %s moves %s" % (position, " ".join(moves)))
-        logger.debug("position %s moves %s" % (position, " ".join(moves)))
+    def position(self, startpos, moves, sfen):
+        if startpos != "startpos":
+            startpos = "sfen " + startpos
+        self.send("position %s moves %s" % (startpos, " ".join(moves)))
 
     def stop(self):
         self.send("stop")

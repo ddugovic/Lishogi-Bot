@@ -146,7 +146,7 @@ class Engine:
             self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
         self.send("variant %s" % variant)
 
-    def go(self, position, moves, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
+    def go(self, startpos, moves, sfen, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
         time = btime if turn == shogi.BLACK else wtime
         otim = wtime if turn == shogi.BLACK else btime
 
@@ -163,7 +163,7 @@ class Engine:
             builder.append("otim %d" % (otim // 10))
         self.send("\n".join(builder))
 
-        self.setup(self.startpos, moves)
+        self.position(sfen, moves, sfen)
         if self.force:
             self.send("go")
             self.force = False
@@ -264,14 +264,16 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
 
-    def setup(self, position, moves=None):
+    def position(self, startpos, moves, sfen):
         if moves:
             self.send(self.move(moves[-1]))
         elif self.setboard:
             # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
             # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
-            # TODO: support handicap and other From Position games
-            self.send("setboard %s" % (self.startpos if position == "startpos" else position))
+            sfen = sfen.split(" ", 2)
+            # TODO: support handicap games (skip rotation?)
+            position = "%s %s %s" % (sfen[0][::-1].swapcase(), sfen[1], sfen[2])
+            self.send("setboard %s" % position)
 
     def move(self, move):
         # Translate 7g7f -> 1... P-g6 (g7g6)

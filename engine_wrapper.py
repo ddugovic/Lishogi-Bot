@@ -57,9 +57,9 @@ class EngineWrapper:
 
     def search_for(self, board, game, movetime):
         moves = "" if game.variant_name == "Standard" else game.state["moves"].split()
-        sfen = board.sfen() if game.variant_name == "Standard" else game.initial_sfen
+        startpos = board.sfen() if game.variant_name == "Standard" else game.initial_sfen
         self.engine.set_variant_options(game.variant_name.lower())
-        return self.search(sfen, moves, turn=board.turn, movetime=movetime // 1000)
+        return self.search(startpos, moves, board.sfen(), turn=board.turn, movetime=movetime // 1000)
     
     def search_with_ponder(self, game, board, btime, wtime, binc, winc, byo, ponder=False):
         moves = [m.usi() for m in list(board.move_stack)] if game.variant_name == "Standard" else game.state["moves"].split()
@@ -70,6 +70,7 @@ class EngineWrapper:
             movetime = float(movetime) / 1000
         best_move, ponder_move = self.search(sfen,
                                              moves,
+                                             board.sfen(),
                                              turn=board.turn,
                                              btime=btime,
                                              wtime=wtime,
@@ -82,9 +83,10 @@ class EngineWrapper:
                                              ponder=ponder)
         return best_move, ponder_move
     
-    def search(self, sfen, moves, turn, btime=None, wtime=None, binc=None, winc=None, byo=None, nodes=None, depth=None, movetime=None, ponder=False):
-        best_move, ponder_move = self.engine.go(sfen,
+    def search(self, startpos, moves, sfen, turn, btime=None, wtime=None, binc=None, winc=None, byo=None, nodes=None, depth=None, movetime=None, ponder=False):
+        best_move, ponder_move = self.engine.go(startpos,
                                                 moves,
+                                                sfen,
                                                 turn=turn,
                                                 btime=btime,
                                                 wtime=wtime,
@@ -164,7 +166,7 @@ class USIEngine(EngineWrapper):
 
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
-        self.engine.position(game.initial_sfen, moves)
+        self.engine.position(game.initial_sfen, moves, board.sfen())
 
 
 class XBoardEngine(EngineWrapper):
@@ -201,7 +203,7 @@ class XBoardEngine(EngineWrapper):
 
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
-        self.engine.setup(game.initial_sfen, moves)
+        self.engine.position(game.initial_sfen, moves, board.sfen())
 
 
 def getHomemadeEngine(name):
