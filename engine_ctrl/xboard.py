@@ -142,7 +142,6 @@ class Engine:
             variant = "shogi"
             self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
         self.send("variant %s" % variant)
-        self.setboard(self.startpos)
 
     def go(self, position, moves, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
         time = btime if turn == shogi.BLACK else wtime
