@@ -260,7 +260,7 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
 
-    def setboard(self, position, moves=None):
+    def setup(self, position, moves=None):
         if moves:
             self.send(self.move(moves[-1]))
         elif self.setboard:

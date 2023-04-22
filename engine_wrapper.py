@@ -201,7 +201,7 @@ class XBoardEngine(EngineWrapper):
 
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
-        self.engine.setboard(game.initial_sfen, moves)
+        self.engine.setup(game.initial_sfen, moves)
 
 
 def getHomemadeEngine(name):
