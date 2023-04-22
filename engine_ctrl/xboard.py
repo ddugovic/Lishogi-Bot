@@ -159,7 +159,7 @@ class Engine:
             builder.append("otim %d" % (otim // 10))
         self.send("\n".join(builder))
 
-        self.setboard(self.startpos, moves)
+        self.setup(self.startpos, moves)
         if self.force:
             self.send("go")
             self.force = False
