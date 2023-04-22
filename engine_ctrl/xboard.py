@@ -91,21 +91,19 @@ class Engine:
         engine_info = {}
 
         while True:
-            command, arg = self.recv_xboard()
+            command, args = self.recv_xboard()
 
             if command == "feature":
-                if arg == "done=1":
+                if args == "done=1":
                     return engine_info
-                feature, value = arg.split("=", 1)
-                if feature == "usermove":
-                    self.usermove = value
-                #elif command == "id":
-                #    name_and_value = arg.split(None, 1)
-                #    if len(name_and_value) == 2:
-                #        engine_info[name_and_value[0]] = name_and_value[1]
+                # TODO: use a CFG (e.g. argparse) to parse lines such as:
+                # feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0
+                # feature option="Mate search -combo Disabled /// *Enabled for drop games /// Enabled"
+                if "usermove=1" in args.split(" "):
+                    self.usermove = True
                 pass
             else:
-                logger.warning("Unexpected engine response to protover 2: %s %s" % (command, arg))
+                logger.warning("Unexpected engine response to protover 2: %s %s" % (command, args))
             self.id = engine_info
 
     def ping(self):
