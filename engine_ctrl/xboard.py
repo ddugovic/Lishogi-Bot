@@ -179,7 +179,8 @@ class Engine:
                 arg_split = arg.split()
                 bestmove = arg_split[0]
                 if bestmove and bestmove != "@@@@":
-                    # Translate a3a4 -> 9g9f
+                    # Translate 1... P-g6 (g7g6) -> 7g7f
+                    # TODO: support handicap and other From Position games
                     files = {'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6', 'g': '7', 'h': '8', 'i': '9'}
                     ranks = {'1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e', '6': 'f', '7': 'g', '8': 'h', '9': 'i'}
 
@@ -267,9 +268,14 @@ class Engine:
         if moves:
             self.send(self.move(moves[-1]))
         else:
+            # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
+            # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
+            # TODO: support handicap and other From Position games
             self.send("setboard %s" % (self.startpos if position == "startpos" else position))
 
     def move(self, move):
+        # Translate 7g7f -> 1... P-g6 (g7g6)
+        # TODO: support handicap and other From Position games
         files = {'a': '1', 'b': '2', 'c': '3', 'd': '4', 'e': '5', 'f': '6', 'g': '7', 'h': '8', 'i': '9'}
         ranks = {'1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e', '6': 'f', '7': 'g', '8': 'h', '9': 'i'}
         usermove = ''
