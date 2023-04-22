@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 class Engine:
     def __init__(self, command, cwd=None):
         self.info = {}
-        self.id = {}
         cwd = cwd or os.path.realpath(os.path.expanduser("."))
         self.proccess = self.open_process(command, cwd)
         self.go_commands = None
         self.force = False
+        self.setboard = False
         self.startpos = None
         self.usermove = False
 
@@ -99,12 +99,11 @@ class Engine:
                 # TODO: use a CFG (e.g. argparse) to parse lines such as:
                 # feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0
                 # feature option="Mate search -combo Disabled /// *Enabled for drop games /// Enabled"
-                if "usermove=1" in args.split(" "):
-                    self.usermove = True
+                self.setboard = "setboard=1" in args.split(" ")
+                self.usermove = "usermove=1" in args.split(" ")
                 pass
             else:
                 logger.warning("Unexpected engine response to protover 2: %s %s" % (command, args))
-            self.id = engine_info
 
     def ping(self):
         self.send("ping 1")
@@ -264,7 +263,7 @@ class Engine:
     def setboard(self, position, moves=None):
         if moves:
             self.send(self.move(moves[-1]))
-        else:
+        elif self.setboard:
             # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
             # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
             # TODO: support handicap and other From Position games
