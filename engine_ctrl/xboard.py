@@ -108,15 +108,6 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to protover 2: %s %s" % (command, args))
 
-    def ping(self):
-        self.send("ping 1")
-        while True:
-            command, arg = self.recv_xboard()
-            if command == "pong":
-                break
-            else:
-                logger.warning("Unexpected engine response to ping: %s %s" % (command, arg))
-
     def setoption(self, name, value):
         name = name.lower()
         if name == "hash":
@@ -156,15 +147,25 @@ class Engine:
         else:
             logger.warning("Unexpected engine response to variant: %s %s" % (command, args))
 
+    def ping(self):
+        self.send("ping 1")
+        while line := self.recv():
+            if line == "pong 1":
+                return True
+            else:
+                logger.warning("Unexpected engine response to ping: %s" % line)
+        return False
+
     def go(self, startpos, moves, sfen, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
         time = btime if turn == shogi.BLACK else wtime
         otim = wtime if turn == shogi.BLACK else btime
 
         if self.force:
-            builder = []
-            builder.append("hard" if ponder else "easy")
-            builder.append("force")
-            self.send("\n".join(builder))
+            self.send("hard" if ponder else "easy")
+            if not self.ping():
+                logger.error("Unexpected engine termination")
+                return
+            self.send("force")
             self.position(self.startpos, None, self.startpos)
         self.position(sfen, moves, sfen)
 

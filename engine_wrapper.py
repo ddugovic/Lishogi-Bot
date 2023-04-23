@@ -180,7 +180,6 @@ class XBoardEngine(EngineWrapper):
         if options:
             for name, value in options.items():
                 self.engine.setoption(name, value)
-        self.engine.ping()
 
     def ponderhit(self):
         self.engine.ponderhit()
