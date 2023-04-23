@@ -143,7 +143,7 @@ class Engine:
         else:
             variant = "shogi"
             self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
-        self.send("force\nvariant %s" % variant)
+        self.send("variant %s" % variant)
         self.force = True
         # Sjaak II does not respond with setup SFEN, therefore a loop cannot be used
         command, args = self.recv_xboard()
@@ -160,9 +160,15 @@ class Engine:
         time = btime if turn == shogi.BLACK else wtime
         otim = wtime if turn == shogi.BLACK else btime
 
-        builder = []
         if self.force:
+            builder = []
             builder.append("hard" if ponder else "easy")
+            builder.append("force")
+            self.send("\n".join(builder))
+            self.position(self.startpos, None, self.startpos)
+        self.position(sfen, moves, sfen)
+
+        builder = []
         if movetime is not None:
             builder.append("st %d" % movetime)
         if depth is not None:
@@ -172,10 +178,7 @@ class Engine:
         if otim is not None:
             builder.append("otim %d" % (otim // 10))
         self.send("\n".join(builder))
-        if self.force:
-            self.position(self.startpos, None, self.startpos)
 
-        self.position(sfen, moves, sfen)
         if self.force:
             self.send("go")
             self.force = False
@@ -283,7 +286,7 @@ class Engine:
             # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
             # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
             sfen = sfen.split(" ", 2)
-            # TODO: support handicap games (skip rotation?)
+            # TODO: support handicap games (switch white/black instead of board rotation?)
             position = "%s %s %s" % (sfen[0][::-1].swapcase(), sfen[1], sfen[2])
             self.send("setboard %s" % position)
 
