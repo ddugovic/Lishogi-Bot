@@ -59,18 +59,20 @@ class EngineWrapper:
         moves = "" if game.variant_name == "Standard" else game.state["moves"].split()
         startpos = board.sfen() if game.variant_name == "Standard" else game.initial_sfen
         self.engine.set_variant_options(game.variant_name.lower())
-        return self.search(startpos, moves, board.sfen(), turn=board.turn, movetime=movetime // 1000)
+        sfen = game.sfen or startpos
+        return self.search(startpos, moves, sfen, turn=board.turn, movetime=movetime // 1000)
     
     def search_with_ponder(self, game, board, btime, wtime, binc, winc, byo, ponder=False):
         moves = [m.usi() for m in list(board.move_stack)] if game.variant_name == "Standard" else game.state["moves"].split()
         sfen = game.initial_sfen
         cmds = self.go_commands
+        sfen = board.sfen() if game.variant_name == "Standard" else game.sfen
         movetime = cmds.get("movetime")
         if movetime is not None:
             movetime = float(movetime) / 1000
         best_move, ponder_move = self.search(sfen,
                                              moves,
-                                             board.sfen(),
+                                             sfen,
                                              turn=board.turn,
                                              btime=btime,
                                              wtime=wtime,
@@ -166,7 +168,8 @@ class USIEngine(EngineWrapper):
 
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
-        self.engine.position(game.initial_sfen, moves, board.sfen())
+        sfen = board.sfen() if game.variant_name == "Standard" else game.sfen
+        self.engine.position(game.initial_sfen, moves, sfen)
 
 
 class XBoardEngine(EngineWrapper):
@@ -202,7 +205,8 @@ class XBoardEngine(EngineWrapper):
 
     def report_game_result(self, game, board):
         moves = [m.usi() for m in board.move_stack]
-        self.engine.position(game.initial_sfen, moves, board.sfen())
+        sfen = board.sfen() if game.variant_name == "Standard" else game.sfen
+        self.engine.position(game.initial_sfen, moves, sfen)
 
 
 def getHomemadeEngine(name):

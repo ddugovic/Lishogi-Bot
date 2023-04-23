@@ -16,7 +16,7 @@ class Engine:
         self.go_commands = None
         self.force = False
         self.setboard = False
-        self.startpos = None
+        self.sfen = None
         self.usermove = False
 
     def set_go_commands(self, go_comm):
@@ -127,13 +127,13 @@ class Engine:
     def set_variant_options(self, variant):
         if variant == "chushogi":
             variant = "chu"
-            self.startpos = "lfcsgekgscfl/a1b1txot1b1a/mvrhdqndhrvm/pppppppppppp/3i4i3/12/12/3I4I3/PPPPPPPPPPPP/MVRHDNQDHRVM/A1B1TOXT1B1A/LFCSGKEGSCFL b - 1"
+            self.sfen = "lfcsgekgscfl/a1b1txot1b1a/mvrhdqndhrvm/pppppppppppp/3i4i3/12/12/3I4I3/PPPPPPPPPPPP/MVRHDNQDHRVM/A1B1TOXT1B1A/LFCSGKEGSCFL b - 1"
         elif variant == "minishogi":
             variant = "minishogi"
-            self.startpos = "rbsgk/4p/5/P4/KGSBR b - 1"
+            self.sfen = "rbsgk/4p/5/P4/KGSBR b - 1"
         else:
             variant = "shogi"
-            self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
+            self.sfen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
         self.send("variant %s" % variant)
         self.force = True
         # Sjaak II does not respond with setup SFEN, therefore a loop cannot be used
@@ -143,7 +143,7 @@ class Engine:
             # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
             sfen = args.split(" ", 2)[-1]
             sfen = sfen.split(" ", 2)
-            self.startpos = "%s b %s" % (sfen[0][::-1].swapcase(), sfen[2])
+            self.sfen = "%s b %s" % (sfen[0][::-1].swapcase(), sfen[2])
         else:
             logger.warning("Unexpected engine response to variant: %s %s" % (command, args))
 
@@ -166,8 +166,9 @@ class Engine:
                 logger.error("Unexpected engine termination")
                 return
             self.send("force")
-            self.position(self.startpos, None, self.startpos)
-        self.position(sfen, moves, sfen)
+            # Future work: if sfen is never None, deprecate self.sfen
+            self.position(None, None, self.sfen)
+        self.position(startpos, moves, sfen)
 
         builder = []
         if movetime is not None:
@@ -280,7 +281,7 @@ class Engine:
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
 
-    def position(self, startpos, moves, sfen):
+    def position(self, startpos, moves, sfen=None):
         if moves:
             self.send(self.move(moves[-1]))
         elif self.setboard:
