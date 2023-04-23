@@ -160,7 +160,10 @@ class Engine:
         time = btime if turn == shogi.BLACK else wtime
         otim = wtime if turn == shogi.BLACK else btime
 
-        if self.force:
+        # During new game initialization, force mode is enabled
+        # In case engine is single-threaded, enable force mode
+        if self.force or not ponder:
+            self.force = True
             self.send("hard" if ponder else "easy")
             if not self.ping():
                 logger.error("Unexpected engine termination")
