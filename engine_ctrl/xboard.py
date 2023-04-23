@@ -85,8 +85,7 @@ class Engine:
         self.inc = inc
         self.byo = byo
         self.send("level 0 %d %d" % (self.base, self.inc + self.byo))
-        self.send("new\nforce")
-        self.force = True
+        self.send("new")
         self.setboard = False
         self.usermove = False
 
@@ -144,7 +143,18 @@ class Engine:
         else:
             variant = "shogi"
             self.startpos = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
-        self.send("variant %s" % variant)
+        self.send("force\nvariant %s" % variant)
+        self.force = True
+        # Sjaak II does not respond with setup SFEN, therefore a loop cannot be used
+        command, args = self.recv_xboard()
+        if command == "setup":
+            # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
+            # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
+            sfen = args.split(" ", 2)[-1]
+            sfen = sfen.split(" ", 2)
+            self.startpos = "%s b %s" % (sfen[0][::-1].swapcase(), sfen[2])
+        else:
+            logger.warning("Unexpected engine response to variant: %s %s" % (command, args))
 
     def go(self, startpos, moves, sfen, turn, movetime=None, btime=None, wtime=None, binc=None, winc=None, byo=None, depth=None, nodes=None, ponder=False):
         time = btime if turn == shogi.BLACK else wtime
@@ -162,6 +172,8 @@ class Engine:
         if otim is not None:
             builder.append("otim %d" % (otim // 10))
         self.send("\n".join(builder))
+        if self.force:
+            self.position(self.startpos, None, self.startpos)
 
         self.position(sfen, moves, sfen)
         if self.force:
