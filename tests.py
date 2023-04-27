@@ -12,10 +12,6 @@ lishogi_bot = importlib.import_module("lishogi-bot")
 TOKEN = os.environ['BOT_TOKEN']
 
 
-def test_nothing():
-    assert True
-
-
 def run_bot(CONFIG, logging_level):
     lishogi_bot.logger.info(lishogi_bot.intro())
     li = lishogi_bot.lishogi.Lishogi(CONFIG["token"], CONFIG["url"], lishogi_bot.__version__, logging_level)
