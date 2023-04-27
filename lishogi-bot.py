@@ -113,7 +113,7 @@ def game_error_handler(error):
     logger.error("".join(traceback.format_exception(error)))
 
 
-def start(li, user_profile, config, logging_level, log_filename, one_game=False):
+def start(li, user_profile, config, logging_level, log_filename, one_game_id=None):
     challenge_config = config["challenge"]
     max_games = challenge_config.get("concurrency", 1)
     logger.info(f"You're now connected to {config['url']} and awaiting challenges.")
@@ -161,7 +161,7 @@ def start(li, user_profile, config, logging_level, log_filename, one_game=False)
             elif event["type"] == "free_process":
                 busy_processes -= 1
                 logger.info(f"+++ Process Free. Total Queued: {queued_processes}. Total Used: {busy_processes}")
-                if one_game:
+                if one_game_id:
                     break
             elif event["type"] == "challenge":
                 chlng = model.Challenge(event["challenge"])
@@ -179,6 +179,8 @@ def start(li, user_profile, config, logging_level, log_filename, one_game=False)
                         pass
             elif event["type"] == "gameStart":
                 game_id = event["game"]["id"]
+                if one_game_id and (game_id != one_game_id):
+                    pass
                 # future work: do not ponder using play_game if pondering is disabled
                 engine_cfg = config["engine"]
                 if busy_processes >= max_games or (engine_can_ponder(correspondence_cfg, engine_cfg, game_id in startup_correspondence_games) and game_id in startup_ponder_games):

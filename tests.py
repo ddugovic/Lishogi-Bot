@@ -44,7 +44,7 @@ def run_bot(CONFIG, logging_level):
 
         @pytest.mark.timeout(300)
         def run_test():
-            lishogi_bot.start(li, user_profile, CONFIG, logging_level, None, one_game=True)
+            lishogi_bot.start(li, user_profile, CONFIG, logging_level, None, one_game_id=game_id)
             headers = {"Accept": "application/json"}
             response = requests.get(f"https://lishogi.org/game/export/{game_id}?moves=false", headers=headers)
             json = response.json()
