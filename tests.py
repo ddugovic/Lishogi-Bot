@@ -53,10 +53,13 @@ def test_bot():
         CONFIG = yaml.safe_load(file)
     CONFIG["token"] = TOKEN
     CONFIG["engine"]["dir"] = "/usr/games"
-    CONFIG["engine"]["name"] = "sjaakii -xboard"
-    CONFIG["engine"]["protocol"] = "xboard"
+    CONFIG["engine"]["name"] = "fairy-stockfish"
+    CONFIG["engine"]["protocol"] = "usi"
     CONFIG["engine"]["go_commands"] = {}
     CONFIG["engine"]["go_commands"]["nodes"] = "100000"
+    run_bot(CONFIG, logging_level)
+    CONFIG["engine"]["name"] = "sjaakii -xboard"
+    CONFIG["engine"]["protocol"] = "xboard"
     run_bot(CONFIG, logging_level)
 
 
