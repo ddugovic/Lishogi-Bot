@@ -318,7 +318,7 @@ def play_game(li, game_id, control_queue, user_profile, config, challenge_queue,
                     if len(board.move_stack) < 2:
                         conversation.send_message("player", hello)
                     else:
-                        print_last_move(board)
+                        print_last_move(game.state["moves"])
                     start_time = time.perf_counter_ns()
                     fake_thinking(config, board, game)
                     correspondence_disconnect_time = correspondence_cfg.get("disconnect_time", 300)
@@ -501,11 +501,12 @@ def fake_thinking(config, board, game):
         time.sleep(sleep)
 
 
-def print_last_move(board):
-    moves = board.move_stack
+def print_last_move(moves):
+    if moves:
+        moves = moves.split(" ")
     move = moves[-1] if moves else None
     logger.info("")
-    logger.info(f"Last move: {len(board.move_stack)}. {move}")
+    logger.info(f"Last move: {len(moves)}. {move}")
 
 
 def setup_board(game):
