@@ -118,7 +118,7 @@ class EngineWrapper:
     def name(self):
         return self.engine.id["name"]
 
-    def report_game_result(self, game, board):
+    def report_game_result(self, game, moves):
         pass
 
     def ponderhit(self):
@@ -166,10 +166,8 @@ class USIEngine(EngineWrapper):
             title = game.opponent.title if game.opponent.title else "none"
             player_type = "computer" if title == "BOT" else "human"
 
-    def report_game_result(self, game, board):
-        moves = [m.usi() for m in board.move_stack]
-        sfen = board.sfen() if game.variant_name == "Standard" else game.sfen
-        self.engine.position(game.initial_sfen, moves, sfen)
+    def report_game_result(self, game, moves):
+        self.engine.position(game.initial_sfen, moves, game.sfen)
 
 
 class XBoardEngine(EngineWrapper):
@@ -203,10 +201,8 @@ class XBoardEngine(EngineWrapper):
             title = game.opponent.title if game.opponent.title else "none"
             player_type = "computer" if title == "BOT" else "human"
 
-    def report_game_result(self, game, board):
-        moves = [m.usi() for m in board.move_stack]
-        sfen = board.sfen() if game.variant_name == "Standard" else game.sfen
-        self.engine.position(game.initial_sfen, moves, sfen)
+    def report_game_result(self, game, moves):
+        self.engine.position(game.initial_sfen, moves, game.sfen)
 
 
 def getHomemadeEngine(name):
