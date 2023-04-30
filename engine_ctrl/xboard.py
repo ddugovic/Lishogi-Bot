@@ -287,6 +287,11 @@ class Engine:
         elif self.setboard:
             # In CECP (xboard) White moves first (e.g. 1. P-c4 / c3c4)
             # However, setboard can be used to force Black to move first (e.g. 1... P-g6 / g7g6)
+            # UCI/USI regard startpos as a valid value, whereas CECP/XBoard does not
+            if startpos == "startpos":
+                startpos = self.sfen
+            if sfen == "startpos":
+                sfen = self.sfen
             sfen = sfen.split(" ", 2)
             # TODO: support handicap games (switch white/black instead of board rotation?)
             position = "%s %s %s" % (sfen[0][::-1].swapcase(), sfen[1], sfen[2])
