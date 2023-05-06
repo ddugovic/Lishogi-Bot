@@ -52,7 +52,6 @@ def test_bot():
     CONFIG["engine"]["name"] = "fairy-stockfish"
     CONFIG["engine"]["protocol"] = "usi"
     CONFIG["engine"]["go_commands"] = {}
-    CONFIG["engine"]["go_commands"]["nodes"] = "100000"
     run_bot(CONFIG, logging_level)
     CONFIG["engine"]["name"] = "sjaakii -xboard"
     CONFIG["engine"]["protocol"] = "xboard"
