@@ -97,12 +97,11 @@ class Engine:
             if command == "feature":
                 if args == "done=1":
                     return engine_info
-                # TODO: use a CFG (e.g. argparse) to parse lines such as:
-                # feature ping=1 setboard=1 colors=0 usermove=1 memory=1 debug=1 sigint=0 sigterm=0
-                # feature option="Mate search -combo Disabled /// *Enabled for drop games /// Enabled"
-                if "setboard=1" in args.split(" "):
+                args = args.split(" ")
+
+                if "setboard=1" in args:
                     self.setboard = True
-                if "usermove=1" in args.split(" "):
+                if "usermove=1" in args:
                     self.usermove = True
                 pass
             else:
@@ -190,11 +189,11 @@ class Engine:
         info["pondermove"] = None
 
         while True:
-            command, arg = self.recv_xboard()
+            command, args = self.recv_xboard()
 
             if command == "move":
-                arg_split = arg.split()
-                bestmove = arg_split[0]
+                args_split = args.split()
+                bestmove = args_split[0]
                 if bestmove and bestmove != "@@@@":
                     # Translate 1... P-g6 (g7g6) -> 7g7f
                     # TODO: support handicap and other From Position games
@@ -211,9 +210,9 @@ class Engine:
                     info["bestmove"] += ranks[bestmove[3]]
                     if len(bestmove) > 4:
                         info["bestmove"] += bestmove[4:]
-                #if len(arg_split) == 3:
-                #    if arg_split[1] == "ponder":
-                #        ponder_move = arg_split[2]
+                #if len(args_split) == 3:
+                #    if args_split[1] == "ponder":
+                #        ponder_move = args_split[2]
                 #        if ponder_move and ponder_move != "@@@@":
                 #            info["pondermove"] = ponder_move
                 if movetime is not None:
@@ -222,12 +221,10 @@ class Engine:
                 return (info["bestmove"], info["pondermove"])
 
             elif command == "info":
-                arg = arg or ""
-
                 # Parse all other parameters
                 score_kind, score_value, lowerbound, upperbound = None, None, False, False
                 current_parameter = None
-                for token in arg.split(" "):
+                for token in args.split(" "):
                     if current_parameter == "string":
                         # Everything until the end of line is a string
                         if "string" in info:
@@ -279,7 +276,7 @@ class Engine:
                         info["score"]["upperbound"] = upperbound
                 self.info = info
             else:
-                logger.warning("Unexpected engine response to go: %s %s" % (command, arg))
+                logger.warning("Unexpected engine response to go: %s %s" % (command, args))
 
     def position(self, startpos, moves, sfen=None):
         if moves:
