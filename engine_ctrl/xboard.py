@@ -104,6 +104,10 @@ class Engine:
                 if "usermove=1" in args:
                     self.usermove = True
                 pass
+            elif command == "#":
+                logger.info("%s %s" % (command, args))
+            elif command in ["Error", "Error:"]:
+                logger.error("Unexpected engine response to protover 2: %s %s" % (command, args))
             else:
                 logger.warning("Unexpected engine response to protover 2: %s %s" % (command, args))
 
@@ -143,6 +147,10 @@ class Engine:
             sfen = args.split(" ", 2)[-1]
             sfen = sfen.split(" ", 2)
             self.sfen = "%s b %s" % (sfen[0][::-1].swapcase(), sfen[2])
+        elif command == "#":
+            logger.info("%s %s" % (command, args))
+        elif command in ["Error", "Error:"]:
+            logger.error("Unexpected engine response to variant: %s %s" % (command, args))
         else:
             logger.warning("Unexpected engine response to variant: %s %s" % (command, args))
 
