@@ -275,6 +275,8 @@ class Engine:
                     if upperbound:
                         info["score"]["upperbound"] = upperbound
                 self.info = info
+            elif command == "#":
+                logger.info("Unexpected engine response to go: %s %s" % (command, args))
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, args))
 
