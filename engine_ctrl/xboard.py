@@ -277,6 +277,8 @@ class Engine:
                 self.info = info
             elif command == "#":
                 logger.info("%s %s" % (command, args))
+            elif command in ["Error", "Error:"]:
+                logger.error("Unexpected engine response to go: %s %s" % (command, args))
             else:
                 logger.warning("Unexpected engine response to go: %s %s" % (command, args))
 
