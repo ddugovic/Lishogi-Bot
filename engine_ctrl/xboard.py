@@ -2,6 +2,7 @@ import shogi
 import threading
 import subprocess
 import os
+import re
 import signal
 import logging
 
@@ -283,7 +284,7 @@ class Engine:
                     if upperbound:
                         info["score"]["upperbound"] = upperbound
                 self.info = info
-            elif command == "#":
+            elif re.match(r"\s*(?:#|\d+\s+-?\d+\s+\d+\s+)", ("%s %s" % (command, args))):
                 logger.info("%s %s" % (command, args))
             elif command in ["Error", "Error:"]:
                 logger.error("Unexpected engine response to go: %s %s" % (command, args))
